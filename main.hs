@@ -1,6 +1,3 @@
-import Data.List (find)
-import Data.Maybe (catMaybes, fromJust)
-
 type WireId = Int
 type GateId = Int
 type Signal = Bool
