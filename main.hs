@@ -6,9 +6,7 @@ type GateId = Int
 type Signal = Bool
 
 data GateType =
-  Input
-  | Output
-  | Not
+  Not
   | Or
   | And
   | Xor
@@ -19,8 +17,8 @@ data Gate = Gate { gateId :: GateId, gateType :: GateType } deriving (Show, Eq)
 
 data Wire = Wire {
   wireId   :: WireId,
-  fromGate :: GateId,
-  toGate   :: GateId,
+  fromGate :: Maybe GateId,
+  toGate   :: Maybe GateId,
   signal   :: Signal
 } deriving (Show, Eq)
 
@@ -40,6 +38,26 @@ evalGate Nor  [a, b] = not (a || b)
 evalGate Nand [a, b] = not (a && b)
 evalGate _ _         = error "Invalid input"
 
+evaluateCircuit :: Circuit -> Circuit
+evaluateCircuit circuit = circuit { wires = updatedWires }
+  where
+    -- Find input signals for each gate
+    inputSignals gate = map signal $ filter (\wire -> toGate wire == Just (gateId gate)) (wires circuit)
+    
+    -- Evaluate signal for each gate
+    gateOutputSignals = map (\gate -> (gateId gate, evalGate (gateType gate) (inputSignals gate))) (gates circuit)
+    
+    -- Update signal in wires based on gate outputs
+    updatedWires = map (updateWireSignal gateOutputSignals) (wires circuit)
+    
+    -- Update wire signal if it's an output from a gate
+    updateWireSignal gateOutputs wire =
+      case fromGate wire of
+        Just gateId -> case lookup gateId gateOutputs of
+                        Just newSignal -> wire { signal = newSignal }
+                        Nothing -> wire
+        Nothing -> wire
+
 test_evalGate :: IO ()
 test_evalGate = do
   print (evalGate Not [True])
@@ -49,14 +67,16 @@ test_evalGate = do
 
 test_circuit :: IO ()
 test_circuit = do
-  let in1 = Gate { gateId = 1, gateType = Input }
-      in2 = Gate { gateId = 2, gateType = Input }
-  let out1 = Gate { gateId = 3, gateType = Output }
-      out2 = Gate { gateId = 4, gateType = Output }
-  print Circuit {
-    gates = [in1, in2, out1, out2],
-    wires = []
+  let g1  = Gate { gateId = 1, gateType = And }
+  let in1 = Wire { wireId = 1, signal = True,  toGate   = Just 1, fromGate = Nothing }
+      in2 = Wire { wireId = 2, signal = True,  toGate   = Just 1, fromGate = Nothing }
+  let out = Wire { wireId = 3, signal = False, fromGate = Just 1, toGate   = Nothing }
+  let testCircuit = Circuit {
+        gates = [g1],
+        wires = [in1, in2, out]
   }
+  print testCircuit
+  print (evaluateCircuit testCircuit)
 
 main :: IO ()
 main = do
