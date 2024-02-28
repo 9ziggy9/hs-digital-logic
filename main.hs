@@ -1,24 +1,21 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE GADTs #-}
-
-import GHC.TypeLits
-
+type WireId = Int
+type GateId = Int
 type Signal = Bool
-data Gate (inputs :: Nat) where
-  Gate :: ([Signal] -> Signal) -> Gate inputs
 
-gateAnd :: Gate 2
-gateAnd = Gate (\[x,y] -> x && y)
+data GateType =
+  Not
+  | Or
+  | And
+  | Xor
+  | Nor
+  | Nand deriving (Show, Eq)
 
-gateOr :: Gate 2
-gateOr = Gate (\[x,y] -> x || y)
+data Gate = Gate { gateId :: GateId, gateType :: GateType } deriving (Show, Eq)
+data Wire = Wire {
+  wireId :: WireId,
+  fromGate :: GateId,
+  toGate :: GateId,
+  signal :: Signal
+  } deriving (Show, Eq)
 
-notGate :: Gate 1
-notGate = Gate(\[x] -> not x)
-
-applyGate :: Gate n -> [Signal] -> Signal
-applyGate (Gate g) inputs = g inputs
-
-main :: IO ()
-main = putStrLn "Hello, world!"
+data Circuit = Circuit { gates :: [Gate], wires :: [Wire] } deriving (Show, Eq)
